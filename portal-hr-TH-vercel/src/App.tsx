@@ -30,22 +30,25 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   }, [location]);
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
+    <div className="flex h-screen bg-gray-50 overflow-hidden font-sans">
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
         <div 
-          className="fixed inset-0 bg-black/50 z-20 lg:hidden"
+          className="fixed inset-0 bg-brand-secondary/80 backdrop-blur-sm z-20 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
       {/* Sidebar */}
       <div className={`
-        fixed inset-y-0 left-0 z-30 w-64 bg-indigo-900 text-white transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0
+        fixed inset-y-0 left-0 z-30 w-64 bg-brand-secondary text-white transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
-        <div className="flex items-center justify-between p-4 border-b border-indigo-800 lg:hidden">
-          <span className="font-bold text-xl">CollabConnect</span>
+        <div className="flex items-center justify-between p-4 border-b border-gray-700 lg:hidden">
+           <div className="flex items-center space-x-2">
+            <img src="/icon_light.png" alt="Logo" className="h-8 w-auto" />
+            <span className="font-bold text-xl">disruptive</span>
+          </div>
           <button onClick={() => setSidebarOpen(false)}>
             <X size={24} />
           </button>
@@ -56,10 +59,10 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         <header className="bg-white shadow-sm p-4 flex items-center lg:hidden">
-          <button onClick={() => setSidebarOpen(true)} className="text-gray-600">
+          <button onClick={() => setSidebarOpen(true)} className="text-brand-secondary">
             <Menu size={24} />
           </button>
-          <span className="ml-4 font-bold text-lg text-indigo-900">CollabConnect</span>
+          <span className="ml-4 font-bold text-lg text-brand-secondary">Disruptive Talent</span>
         </header>
 
         <main className="flex-1 overflow-y-auto p-4 md:p-8">
