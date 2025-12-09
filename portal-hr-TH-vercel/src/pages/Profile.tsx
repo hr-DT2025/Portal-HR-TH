@@ -1,104 +1,144 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../App';
-import { User as UserIcon, Shield, Briefcase, Mail, Key } from 'lucide-react';
+import { dataService } from '../services/dataService';
+import { Request, RequestType, RequestStatus } from '../types';
+import { FilePlus, History, Send, Loader2, CheckCircle, XCircle, Clock } from 'lucide-react';
 
-export default function Profile() {
+export default function Requests() {
   const { user } = useAuth();
+  const [requests, setRequests] = useState<Request[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
-  if (!user) return null;
+  // Form State
+  const [requestType, setRequestType] = useState<RequestType>(RequestType.TIME_OFF);
+  const [details, setDetails] = useState('');
+
+  useEffect(() => {
+    loadRequests();
+  }, []);
+
+  const loadRequests = async () => {
+    setLoading(true);
+    const data = await dataService.getRequests();
+    setRequests(data);
+    setLoading(false);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      await dataService.createRequest(requestType, details);
+      setDetails('');
+      loadRequests(); // Reload list
+      alert("Solicitud enviada con éxito");
+    } catch (error) {
+      alert("Error al enviar solicitud");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const getStatusIcon = (status: RequestStatus) => {
+    switch (status) {
+      case RequestStatus.APPROVED: return <CheckCircle className="text-brand-jade" size={18} />;
+      case RequestStatus.REJECTED: return <XCircle className="text-red-500" size={18} />;
+      default: return <Clock className="text-yellow-500" size={18} />;
+    }
+  };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">Mi Perfil</h1>
+    <div className="space-y-6 max-w-5xl mx-auto font-sans">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-brand-secondary">Solicitudes RRHH</h1>
+      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        
-        {/* Profile Card */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col items-center text-center">
-          <div className="w-24 h-24 rounded-full p-1 border-2 border-indigo-100 mb-4">
-             <img src={user.avatarUrl} alt="Profile" className="w-full h-full rounded-full object-cover" />
-          </div>
-          <h2 className="text-xl font-bold text-gray-900">{user.fullName}</h2>
-          <p className="text-indigo-600 font-medium text-sm">{user.role}</p>
-          <div className="mt-6 w-full pt-6 border-t border-gray-100 flex flex-col gap-2 text-sm text-gray-500">
-             <div className="flex items-center justify-between">
-                <span>Departamento</span>
-                <span className="font-medium text-gray-800">{user.department}</span>
-             </div>
-             <div className="flex items-center justify-between">
-                <span>Líder</span>
-                <span className="font-medium text-gray-800">{user.leader}</span>
-             </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Form Section */}
+        <div className="lg:col-span-1">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 sticky top-8">
+            <h2 className="text-lg font-semibold text-brand-secondary mb-4 flex items-center gap-2">
+              <FilePlus className="text-brand-primary" size={20} />
+              Nueva Solicitud
+            </h2>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Solicitud</label>
+                <select
+                  value={requestType}
+                  onChange={(e) => setRequestType(e.target.value as RequestType)}
+                  className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-brand-primary outline-none bg-white transition-all"
+                >
+                  {Object.values(RequestType).map((t) => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Detalles / Justificación</label>
+                <textarea
+                  required
+                  value={details}
+                  onChange={(e) => setDetails(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-brand-primary outline-none h-32 resize-none transition-all"
+                  placeholder="Describe brevemente el motivo..."
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={submitting}
+                className="w-full bg-brand-primary hover:bg-cyan-500 text-white font-medium py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center space-x-2 disabled:opacity-50 shadow-md shadow-brand-primary/20"
+              >
+                {submitting ? <Loader2 className="animate-spin" size={20}/> : <><Send size={18} /> <span>Enviar Solicitud</span></>}
+              </button>
+            </form>
           </div>
         </div>
 
-        {/* Settings Form */}
-        <div className="md:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-6 flex items-center gap-2">
-            <Shield className="text-indigo-500" size={20} />
-            Información de Cuenta
-          </h3>
-
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nombre Completo</label>
-                <div className="relative">
-                  <UserIcon className="absolute left-3 top-2.5 text-gray-400 h-5 w-5" />
-                  <input
-                    type="text"
-                    disabled
-                    value={user.fullName}
-                    className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-500"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Correo Corporativo</label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-2.5 text-gray-400 h-5 w-5" />
-                  <input
-                    type="text"
-                    disabled
-                    value={user.email}
-                    className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-500"
-                  />
-                </div>
-              </div>
+        {/* History Section */}
+        <div className="lg:col-span-2">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="p-6 border-b border-gray-100">
+              <h2 className="text-lg font-semibold text-brand-secondary flex items-center gap-2">
+                <History className="text-gray-400" size={20} />
+                Historial de Solicitudes
+              </h2>
             </div>
-
-            <div className="pt-6 border-t border-gray-100">
-              <h4 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <Key className="text-gray-400" size={16} />
-                Seguridad
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Nueva Contraseña</label>
-                    <input
-                      type="password"
-                      placeholder="••••••••"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
-                    />
-                 </div>
-                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Confirmar Contraseña</label>
-                    <input
-                      type="password"
-                      placeholder="••••••••"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
-                    />
-                 </div>
+            
+            {loading ? (
+              <div className="p-8 text-center text-gray-500">Cargando...</div>
+            ) : requests.length === 0 ? (
+              <div className="p-8 text-center text-gray-500">No hay solicitudes recientes.</div>
+            ) : (
+              <div className="divide-y divide-gray-100">
+                {requests.map((req) => (
+                  <div key={req.id} className="p-4 hover:bg-gray-50 transition-colors">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <span className="text-sm font-bold text-brand-secondary block mb-1">{req.type}</span>
+                        <p className="text-gray-600 text-sm mb-2">{req.details}</p>
+                        <p className="text-xs text-gray-400">{new Date(req.date).toLocaleDateString()}</p>
+                      </div>
+                      <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-gray-50 border border-gray-100">
+                        {getStatusIcon(req.status)}
+                        <span className={`text-xs font-semibold ${
+                          req.status === RequestStatus.APPROVED ? 'text-brand-secondary' :
+                          req.status === RequestStatus.REJECTED ? 'text-red-600' :
+                          'text-yellow-600'
+                        }`}>
+                          {req.status}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
-              <div className="mt-4 flex justify-end">
-                <button className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-                  Actualizar Contraseña
-                </button>
-              </div>
-            </div>
+            )}
           </div>
         </div>
-
       </div>
     </div>
   );
