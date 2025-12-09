@@ -19,7 +19,7 @@ export default function Sidebar() {
       <div className="p-6 hidden lg:block border-b border-gray-700/50">
         <div className="flex items-center space-x-3 mb-2">
           {/* Logo del cliente */}
-          <img src="Public/icon_light.png" alt="Disruptive Logo" className="h-10 w-auto object-contain" />
+          <img src="portal-hr-TH-vercel/Public/icon_light.png" alt="Disruptive Logo" className="h-10 w-auto object-contain" />
           <div className="flex flex-col">
             <span className="text-xl font-bold tracking-tight leading-tight">disruptive</span>
             <span className="text-sm font-light tracking-wide text-brand-primary leading-none">talent</span>
