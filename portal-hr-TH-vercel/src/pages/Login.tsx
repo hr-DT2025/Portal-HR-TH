@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../App';
 import { dataService } from '../services/dataService';
-import { HeartHandshake, Loader2, Mail, Lock, ArrowRight } from 'lucide-react';
+import { Loader2, Mail, Lock, ArrowRight } from 'lucide-react';
 
 export default function Login() {
   const { login } = useAuth();
@@ -14,7 +14,6 @@ export default function Login() {
     e.preventDefault();
     setLoading(true);
     try {
-      // Simulate API call
       const user = isRegistering 
         ? await dataService.register(email) 
         : await dataService.login(email);
@@ -28,49 +27,58 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-indigo-50 p-4">
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-xl overflow-hidden">
-        <div className="bg-indigo-600 p-8 text-center">
-          <div className="mx-auto bg-white/20 w-16 h-16 rounded-full flex items-center justify-center mb-4 backdrop-blur-sm">
-            <HeartHandshake className="text-white h-8 w-8" />
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4 font-sans">
+      <div className="max-w-4xl w-full bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row min-h-[600px]">
+        
+        {/* Left Side - Brand Area */}
+        <div className="md:w-1/2 bg-brand-secondary p-12 text-center flex flex-col justify-center items-center relative overflow-hidden">
+          {/* Decorative Circle */}
+          <div className="absolute top-0 right-0 w-64 h-64 bg-brand-primary opacity-10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl"></div>
+          <div className="absolute bottom-0 left-0 w-64 h-64 bg-brand-turmalina opacity-10 rounded-full translate-y-1/2 -translate-x-1/2 blur-3xl"></div>
+
+          <div className="relative z-10 mb-8">
+            <img src="/icon_light.png" alt="Logo" className="h-20 w-auto mx-auto mb-6" />
+            <h1 className="text-4xl font-bold text-white mb-2">disruptive<span className="text-brand-primary font-light">talent</span></h1>
           </div>
-          <h2 className="text-3xl font-bold text-white mb-2">
-            {isRegistering ? 'Únete al Equipo' : 'Bienvenido de nuevo'}
+          
+          <h2 className="text-2xl font-bold text-white mb-4 relative z-10">
+            {isRegistering ? 'Únete a la Revolución' : 'Bienvenido de nuevo'}
           </h2>
-          <p className="text-indigo-100">
+          <p className="text-gray-300 relative z-10 max-w-xs mx-auto leading-relaxed">
             {isRegistering 
-              ? 'Regístrate para acceder a tus beneficios.' 
-              : 'Ingresa a tu portal de colaborador.'}
+              ? 'Regístrate para gestionar tu desarrollo y beneficios en un solo lugar.' 
+              : 'Accede a tu portal de colaborador y conecta con tu crecimiento.'}
           </p>
         </div>
 
-        <div className="p-8">
+        {/* Right Side - Form */}
+        <div className="md:w-1/2 p-12 flex flex-col justify-center">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Correo Corporativo</label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-5 w-5" />
+              <label className="block text-sm font-semibold text-brand-secondary mb-2">Correo Corporativo</label>
+              <div className="relative group">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-brand-primary transition-colors h-5 w-5" />
                 <input
                   type="email"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none"
-                  placeholder="nombre@empresa.com"
+                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none bg-gray-50 focus:bg-white"
+                  placeholder="nombre@disruptive.com"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-5 w-5" />
+              <label className="block text-sm font-semibold text-brand-secondary mb-2">Contraseña</label>
+              <div className="relative group">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-brand-primary transition-colors h-5 w-5" />
                 <input
                   type="password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none"
+                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none bg-gray-50 focus:bg-white"
                   placeholder="••••••••"
                 />
               </div>
@@ -79,7 +87,7 @@ export default function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-4 rounded-lg transition-all flex items-center justify-center space-x-2 disabled:opacity-70 disabled:cursor-not-allowed shadow-lg hover:shadow-indigo-500/30"
+              className="w-full bg-brand-primary hover:bg-cyan-500 text-white font-bold py-3.5 px-4 rounded-xl transition-all flex items-center justify-center space-x-2 disabled:opacity-70 disabled:cursor-not-allowed shadow-lg shadow-brand-primary/30 mt-4"
             >
               {loading ? (
                 <Loader2 className="animate-spin h-5 w-5" />
@@ -92,10 +100,10 @@ export default function Login() {
             </button>
           </form>
 
-          <div className="mt-6 text-center">
+          <div className="mt-8 text-center">
             <button
               onClick={() => setIsRegistering(!isRegistering)}
-              className="text-sm text-indigo-600 hover:text-indigo-800 font-medium"
+              className="text-sm text-brand-secondary hover:text-brand-primary font-medium transition-colors"
             >
               {isRegistering 
                 ? '¿Ya tienes cuenta? Inicia sesión' 
