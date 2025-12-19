@@ -1,7 +1,28 @@
 export enum Role {
-  COLLABORATOR = 'Collaborator',
   ADMIN = 'Admin',
-  MANAGER = 'Manager'
+  RH = 'RH',
+  COLLABORATOR = 'Colaborador',
+  CEO_RH = 'Ceo RH',
+  CEO_CLIENTE = 'Ceo Cliente'
+}
+
+export enum RequestStatus {
+  PENDING = 'Pendiente',
+  IN_PROGRESS = 'En Proceso',
+  COMPLETED = 'Completado'
+}
+
+export enum RequestType {
+  CERTIFICATE = 'Constancia',
+  REFERENCE = 'Referencia',
+  CONSULTA = 'Consulta'
+}
+
+export interface Empresa {
+  id: string;
+  nombre: string;
+  nitIdentificacion?: string;
+  logoUrl?: string;
 }
 
 export interface User {
@@ -9,53 +30,36 @@ export interface User {
   email: string;
   fullName: string;
   role: Role;
-  department: string;
-  leader: string;
-  startDate: string; // ISO Date
+  empresaId?: string;
+  
+  // Campos de Perfil extendidos
+  area?: string;
+  rolPuesto?: string;
+  fechaIngreso?: string;
+  tipoIdentificacion?: string;
+  numeroIdentificacion?: string;
+  correoPersonal?: string;
+  telefonoWhatsapp?: string;
+  
   avatarUrl?: string;
-  ptoTotal: number;
-  ptoTaken: number;
-  skills: string[];
 }
 
-export interface Project {
+export interface Solicitud {
   id: string;
-  name: string;
-  role: string;
-  status: 'Active' | 'Completed' | 'On Hold';
+  colaboradorId: string;
+  empresaId: string;
+  tipo: RequestType;
+  estatus: RequestStatus;
+  detalles?: string;
+  archivoUrl?: string; // URL del PDF generado por n8n
+  createdAt: string;
 }
 
-export enum RequestType {
-  TIME_OFF = 'Día Libre (TPP)',
-  CERTIFICATE = 'Constancia Laboral',
-  RECOMMENDATION = 'Recomendación Laboral'
-}
-
-export enum RequestStatus {
-  PENDING = 'Pendiente',
-  APPROVED = 'Aprobado',
-  REJECTED = 'Rechazado'
-}
-
-export interface Request {
+export interface ChatMessage {
   id: string;
-  userId: string;
-  type: RequestType;
-  details: string;
-  date: string;
-  status: RequestStatus;
-}
-
-export enum Mood {
-  HAPPY = 'Happy',
-  NEUTRAL = 'Neutral',
-  STRESSED = 'Stressed',
-  TIRED = 'Tired',
-  EXCITED = 'Excited'
-}
-
-export interface EmotionalLog {
-  date: string;
-  mood: Mood;
-  aiFeedback?: string;
+  emisorId: string;
+  receptorId?: string;
+  mensaje: string;
+  googleThreadId?: string;
+  createdAt: string;
 }
