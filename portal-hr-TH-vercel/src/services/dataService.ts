@@ -1,72 +1,166 @@
-import { User, Role, Project, Request, RequestStatus, RequestType } from '../types';
-
-// Mock Data Store
-const MOCK_USER: User = {
-  id: 'user-123',
-  email: 'colaborador@empresa.com',
-  fullName: 'Ana García',
-  role: Role.COLLABORATOR,
-  department: 'Desarrollo de Producto',
-  leader: 'Carlos Rodríguez',
-  startDate: '2022-03-15T00:00:00Z',
-  ptoTotal: 15,
-  ptoTaken: 4,
-  skills: ['React', 'TypeScript', 'UI/UX', 'Comunicación Asertiva'],
-  avatarUrl: 'https://picsum.photos/200/200'
-};
-
-const MOCK_PROJECTS: Project[] = [
-  { id: '1', name: 'Redesign Portal Cliente', role: 'Frontend Lead', status: 'Active' },
-  { id: '2', name: 'Migración a Nube', role: 'Support', status: 'Completed' },
-  { id: '3', name: 'Hackathon Interno', role: 'Participante', status: 'Active' },
-];
-
-const MOCK_REQUESTS: Request[] = [
-  { id: '101', userId: 'user-123', type: RequestType.TIME_OFF, details: 'Vacaciones de verano', date: '2023-11-10', status: RequestStatus.APPROVED },
-  { id: '102', userId: 'user-123', type: RequestType.CERTIFICATE, details: 'Para trámite bancario', date: '2024-01-15', status: RequestStatus.PENDING },
-];
-
-// Helper to simulate network delay
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+import { supabase } from './supabaseClient';
+import { 
+  User, 
+  Role, 
+  Solicitud, 
+  RequestType, 
+  RequestStatus, 
+  Empresa 
+} from '../types';
 
 export const dataService = {
-  login: async (email: string): Promise<User> => {
-    await delay(800);
-    // Simulating login - in real app, check Supabase Auth
-    return { ...MOCK_USER, email };
+  // --- AUTENTICACIÓN ---
+
+  // Registro de nuevo colaborador
+  register: async (email: string, password: string, fullName: string, empresaNombre: string): Promise<{ user: User | null, error: any }> => {
+    // 1. Crear el usuario en Supabase Auth
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email,
+      password,
+    });
+
+    if (authError) return { user: null, error: authError };
+
+    if (authData.user) {
+      // 2. Crear el perfil en la tabla 'profiles'
+      // Nota: En un entorno real, podrías buscar si la empresa ya existe o crearla
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .insert([
+          { 
+            id: authData.user.id, 
+            email, 
+            full_name: fullName,
+            role: Role.COLLABORATOR // Por defecto entran como colaboradores
+          }
+        ])
+        .select()
+        .single();
+
+      if (profileError) return { user: null, error: profileError };
+      
+      return { 
+        user: {
+          id: profileData.id,
+          email: profileData.email,
+          fullName: profileData.full_name,
+          role: profileData.role as Role,
+        }, 
+        error: null 
+      };
+    }
+    
+    return { user: null, error: 'Error desconocido' };
   },
 
-  register: async (email: string): Promise<User> => {
-    await delay(1000);
-    return { ...MOCK_USER, email, id: `new-${Date.now()}` };
-  },
+  // Inicio de sesión
+  login: async (email: string, password: string): Promise<{ user: User | null, error: any }> => {
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-  getUser: async (): Promise<User> => {
-    await delay(500);
-    return MOCK_USER;
-  },
+    if (authError) return { user: null, error: authError };
 
-  getProjects: async (): Promise<Project[]> => {
-    await delay(600);
-    return MOCK_PROJECTS;
-  },
+    // Buscar los datos del perfil asociado
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', authData.user.id)
+      .single();
 
-  getRequests: async (): Promise<Request[]> => {
-    await delay(600);
-    return MOCK_REQUESTS;
-  },
+    if (profileError) return { user: null, error: profileError };
 
-  createRequest: async (type: RequestType, details: string): Promise<Request> => {
-    await delay(800);
-    const newRequest: Request = {
-      id: `req-${Date.now()}`,
-      userId: MOCK_USER.id,
-      type,
-      details,
-      date: new Date().toISOString(),
-      status: RequestStatus.PENDING
+    return {
+      user: {
+        id: profileData.id,
+        email: profileData.email,
+        fullName: profileData.full_name,
+        role: profileData.role as Role,
+        empresaId: profileData.empresa_id,
+        area: profileData.area,
+        rolPuesto: profileData.rol_puesto,
+        fechaIngreso: profileData.fecha_ingreso,
+        tipoIdentificacion: profileData.tipo_identificacion,
+        numeroIdentificacion: profileData.numero_identificacion,
+        correoPersonal: profileData.correo_personal,
+        telefonoWhatsapp: profileData.telefono_whatsapp,
+      },
+      error: null
     };
-    MOCK_REQUESTS.unshift(newRequest); // Add to local mock store
-    return newRequest;
+  },
+
+  // --- EMPRESAS (Para el Autocompletado) ---
+  searchCompanies: async (query: string): Promise<Empresa[]> => {
+    if (query.length < 3) return [];
+    
+    const { data, error } = await supabase
+      .from('empresas')
+      .select('*')
+      .ilike('nombre', `%${query}%`)
+      .limit(5);
+
+    if (error) return [];
+    return data.map(emp => ({
+      id: emp.id,
+      nombre: emp.nombre,
+      nitIdentificacion: emp.nit_identificacion
+    }));
+  },
+
+  // --- SOLICITUDES (Constancias/Referencias) ---
+  getRequests: async (userId: string): Promise<Solicitud[]> => {
+    const { data, error } = await supabase
+      .from('solicitudes')
+      .select('*')
+      .eq('colaborador_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data.map(item => ({
+      id: item.id,
+      colaboradorId: item.colaborador_id,
+      empresaId: item.empresa_id,
+      tipo: item.tipo as RequestType,
+      estatus: item.estatus as RequestStatus,
+      detalles: item.detalles,
+      archivoUrl: item.archivo_url,
+      createdAt: item.created_at
+    }));
+  },
+
+  createRequest: async (userId: string, empresaId: string, tipo: RequestType, detalles: string): Promise<void> => {
+    const { error } = await supabase
+      .from('solicitudes')
+      .insert([
+        { 
+          colaborador_id: userId, 
+          empresa_id: empresaId,
+          tipo, 
+          detalles,
+          estatus: RequestStatus.PENDING 
+        }
+      ]);
+
+    if (error) throw error;
+    
+    // Aquí es donde se dispararía el Webhook de n8n automáticamente 
+    // si configuras un "Database Webhook" en el panel de Supabase.
+  },
+
+  // --- PERFIL ---
+  updateProfile: async (userId: string, updates: Partial<User>): Promise<void> => {
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        tipo_identificacion: updates.tipoIdentificacion,
+        numero_identificacion: updates.numeroIdentificacion,
+        correo_personal: updates.correoPersonal,
+        telefono_whatsapp: updates.telefonoWhatsapp,
+        updated_at: new Date()
+      })
+      .eq('id', userId);
+
+    if (error) throw error;
   }
 };
