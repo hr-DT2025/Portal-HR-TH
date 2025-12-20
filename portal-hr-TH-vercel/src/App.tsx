@@ -1,19 +1,21 @@
-import { supabase } from './services/supabaseClient'; // Añade esta línea
 import React, { useState, useEffect, createContext, useContext } from 'react';
-import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { supabase } from './services/supabaseClient';
 import { dataService } from './services/dataService';
 import { User } from './types';
 
-// Importación de Páginas y Componentes
+// Páginas
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Requests from './pages/Requests';
 import Profile from './pages/Profile';
-import CompleteProfileForm from './pages/CompleteProfileForm'; // Asegúrate de que esté en 'pages'
+import CompleteProfileForm from './pages/CompleteProfileForm'; // Verifica que la ruta sea correcta
 import Sidebar from './components/Sidebar';
+
+// Iconos
 import { Menu, X } from 'lucide-react';
 
-// --- Definición del Contexto de Autenticación ---
+// --- Contexto de Autenticación ---
 interface AuthContextType {
   user: User | null;
   needsProfile: boolean;
@@ -24,29 +26,52 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType>(null!);
 export const useAuth = () => useContext(AuthContext);
 
-// --- Componente de Diseño (Layout) ---
+// --- Layout Principal (Mantiene tu diseño visual) ---
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const location = useLocation();
+
+  // Cerrar sidebar al cambiar de ruta en móviles
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [location]);
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
-      {/* Mobile Sidebar Overlay */}
+    <div className="flex h-screen bg-gray-50 overflow-hidden font-sans">
+      {/* Overlay para móvil */}
       {sidebarOpen && (
-        <div className="fixed inset-0 bg-slate-900/50 z-20 lg:hidden" onClick={() => setSidebarOpen(false)} />
+        <div 
+          className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-20 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
       )}
 
-      {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-30 w-64 bg-slate-900 text-white transform transition-transform lg:relative lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <Sidebar />
+      {/* Sidebar - Colores según tu marca */}
+      <div className={`
+        fixed inset-y-0 left-0 z-30 w-64 bg-slate-900 text-white transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+      `}>
+        <div className="flex flex-col h-full">
+          <div className="p-6 flex items-center justify-between">
+            <span className="text-xl font-bold tracking-wider text-white">PORTAL</span>
+            <button className="lg:hidden text-gray-400" onClick={() => setSidebarOpen(false)}>
+              <X size={24} />
+            </button>
+          </div>
+          <Sidebar />
+        </div>
       </div>
 
       {/* Contenido Principal */}
       <div className="flex-1 flex flex-col overflow-hidden">
         <header className="bg-white shadow-sm p-4 flex items-center lg:hidden">
-          <button onClick={() => setSidebarOpen(true)}><Menu size={24} /></button>
-          <span className="ml-4 font-bold text-slate-800">Portal Colaborador</span>
+          <button onClick={() => setSidebarOpen(true)} className="text-slate-800">
+            <Menu size={24} />
+          </button>
+          <span className="ml-4 font-bold text-lg text-slate-800">Disruptive Talent</span>
         </header>
-        <main className="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-50">
+
+        <main className="flex-1 overflow-y-auto p-4 md:p-8">
           {children}
         </main>
       </div>
@@ -54,19 +79,21 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   );
 };
 
-// --- Componente Principal App ---
+// --- Componente Raíz App ---
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [needsProfile, setNeedsProfile] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  // Función para validar sesión y perfil
   const checkAuth = async () => {
+    setLoading(true);
     try {
-      const { user, needsProfile } = await dataService.getCurrentProfile();
-      setUser(user);
-      setNeedsProfile(needsProfile);
+      const { user: profileUser, needsProfile: profilePending } = await dataService.getCurrentProfile();
+      setUser(profileUser);
+      setNeedsProfile(profilePending);
     } catch (error) {
-      console.error("Error en checkAuth:", error);
+      console.error("Error validando sesión:", error);
     } finally {
       setLoading(false);
     }
@@ -80,12 +107,27 @@ export default function App() {
 
   useEffect(() => {
     checkAuth();
+
+    // Escuchar cambios de estado en Supabase (Login/Logout)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session) {
+        setUser(null);
+        setNeedsProfile(false);
+      } else {
+        checkAuth();
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-white">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="flex h-screen items-center justify-center bg-white text-slate-600">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <p className="font-medium">Cargando portal...</p>
+        </div>
       </div>
     );
   }
@@ -94,26 +136,36 @@ export default function App() {
     <AuthContext.Provider value={{ user, needsProfile, checkAuth, logout }}>
       <HashRouter>
         <Routes>
-          {/* Ruta Raíz: Decide a dónde enviar al usuario según su estado */}
+          {/* Lógica de redirección inicial */}
           <Route path="/" element={
             user ? <Navigate to="/dashboard" /> : 
             (needsProfile ? <Navigate to="/completar-registro" /> : <Navigate to="/login" />)
           } />
 
-          {/* Login */}
-          <Route path="/login" element={!user && !needsProfile ? <Login /> : <Navigate to="/" />} />
+          {/* Rutas Públicas */}
+          <Route path="/login" element={
+            !user && !needsProfile ? <Login /> : <Navigate to="/" />
+          } />
 
-          {/* Onboarding: Si tiene cuenta Auth pero no datos en la tabla profiles */}
+          {/* Registro de Perfil (Onboarding) */}
           <Route path="/completar-registro" element={
             needsProfile ? <CompleteProfileForm /> : <Navigate to="/" />
           } />
 
-          {/* Rutas Privadas */}
-          <Route path="/dashboard" element={user ? <Layout><Dashboard /></Layout> : <Navigate to="/" />} />
-          <Route path="/requests" element={user ? <Layout><Requests /></Layout> : <Navigate to="/" />} />
-          <Route path="/profile" element={user ? <Layout><Profile /></Layout> : <Navigate to="/" />} />
+          {/* Rutas Privadas Protegidas */}
+          <Route path="/dashboard" element={
+            user ? <Layout><Dashboard /></Layout> : <Navigate to="/" />
+          } />
           
-          {/* Redirección por defecto */}
+          <Route path="/requests" element={
+            user ? <Layout><Requests /></Layout> : <Navigate to="/" />
+          } />
+          
+          <Route path="/profile" element={
+            user ? <Layout><Profile /></Layout> : <Navigate to="/" />
+          } />
+
+          {/* Fallback */}
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </HashRouter>
