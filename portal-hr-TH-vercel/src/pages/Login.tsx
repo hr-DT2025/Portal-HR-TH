@@ -86,7 +86,7 @@ const Login: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
-        <img src="/icon_light.png" alt="Logo" className="mx-auto h-12 w-auto mb-4" />
+        <img src="icon_light.png" alt="Logo" className="mx-auto h-12 w-auto mb-4" />
         <h2 className="text-3xl font-extrabold text-slate-900">
           {isRegistering ? 'Crea tu cuenta de colaborador' : 'Bienvenido de nuevo'}
         </h2>
