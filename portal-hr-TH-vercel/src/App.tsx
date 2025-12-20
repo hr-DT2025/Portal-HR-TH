@@ -1,102 +1,54 @@
-import React, { useState, createContext, useContext, useEffect } from 'react';
-import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import React, { useState, useEffect, createContext, useContext } from 'react';
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { dataService } from './services/dataService';
 import { User } from './types';
-import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import Requests from './pages/Requests';
-import Profile from './pages/Profile';
-import Sidebar from './components/Sidebar';
-import { Menu, X } from 'lucide-react';
 
-// --- Auth Context ---
+// Extendemos el contexto
 interface AuthContextType {
   user: User | null;
-  login: (user: User) => void;
-  logout: () => void;
+  needsProfile: boolean;
+  checkAuth: () => void;
 }
 
 const AuthContext = createContext<AuthContextType>(null!);
 
-export const useAuth = () => useContext(AuthContext);
-
-// --- Layout Component ---
-const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const location = useLocation();
-
-  // Close sidebar on route change (mobile)
-  useEffect(() => {
-    setSidebarOpen(false);
-  }, [location]);
-
-  return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden font-sans">
-      {/* Mobile Sidebar Overlay */}
-      {sidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-brand-secondary/80 backdrop-blur-sm z-20 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      {/* Sidebar */}
-      <div className={`
-        fixed inset-y-0 left-0 z-30 w-64 bg-brand-secondary text-white transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0
-        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-      `}>
-        <div className="flex items-center justify-between p-4 border-b border-gray-700 lg:hidden">
-           <div className="flex items-center space-x-2">
-            <img src="/icon_light.png" alt="Logo" className="h-8 w-auto" />
-            <span className="font-bold text-xl">disruptive</span>
-          </div>
-          <button onClick={() => setSidebarOpen(false)}>
-            <X size={24} />
-          </button>
-        </div>
-        <Sidebar />
-      </div>
-
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="bg-white shadow-sm p-4 flex items-center lg:hidden">
-          <button onClick={() => setSidebarOpen(true)} className="text-brand-secondary">
-            <Menu size={24} />
-          </button>
-          <span className="ml-4 font-bold text-lg text-brand-secondary">Disruptive Talent</span>
-        </header>
-
-        <main className="flex-1 overflow-y-auto p-4 md:p-8">
-          {children}
-        </main>
-      </div>
-    </div>
-  );
-};
-
-// --- Main App ---
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
+  const [needsProfile, setNeedsProfile] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const login = (userData: User) => setUser(userData);
-  const logout = () => setUser(null);
+  const checkAuth = async () => {
+    setLoading(true);
+    const { user, needsProfile } = await dataService.getCurrentProfile();
+    setUser(user);
+    setNeedsProfile(needsProfile);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    checkAuth();
+  }, []);
+
+  if (loading) return <div className="flex h-screen items-center justify-center">Cargando...</div>;
 
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ user, needsProfile, checkAuth }}>
       <HashRouter>
         <Routes>
-          <Route path="/" element={!user ? <Login /> : <Navigate to="/dashboard" />} />
-          
-          <Route path="/dashboard" element={
-            user ? <Layout><Dashboard /></Layout> : <Navigate to="/" />
+          {/* Si no está logueado -> Login */}
+          <Route path="/login" element={!user && !needsProfile ? <Login /> : <Navigate to="/" />} />
+
+          {/* Si está logueado pero falta perfil -> Registro de Datos */}
+          <Route path="/completar-registro" element={
+            needsProfile ? <CompleteProfileForm /> : <Navigate to="/" />
+          } />
+
+          {/* Rutas Protegidas (Solo si user existe y perfil está completo) */}
+          <Route path="/" element={
+            user ? <Layout><Dashboard /></Layout> : <Navigate to="/login" />
           } />
           
-          <Route path="/requests" element={
-            user ? <Layout><Requests /></Layout> : <Navigate to="/" />
-          } />
-          
-          <Route path="/profile" element={
-            user ? <Layout><Profile /></Layout> : <Navigate to="/" />
-          } />
+          {/* ... otras rutas */}
         </Routes>
       </HashRouter>
     </AuthContext.Provider>
