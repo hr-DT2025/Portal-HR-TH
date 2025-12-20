@@ -63,3 +63,26 @@ export interface ChatMessage {
   googleThreadId?: string;
   createdAt: string;
 }
+
+// Añade esto al final de src/types.ts
+
+export enum Mood {
+  HAPPY = 'Happy',
+  NEUTRAL = 'Neutral',
+  STRESSED = 'Stressed',
+  TIRED = 'Tired',
+  EXCITED = 'Excited'
+}
+
+export interface Project {
+  id: string;
+  name: string;
+  role: string;
+  status: 'Active' | 'Completed' | 'On Hold';
+}
+
+export interface EmotionalLog {
+  date: string;
+  mood: Mood;
+  aiFeedback?: string;
+}
