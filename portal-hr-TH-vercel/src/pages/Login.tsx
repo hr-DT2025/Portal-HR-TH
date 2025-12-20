@@ -58,6 +58,31 @@ const Login: React.FC = () => {
     }, 1500);
   };
 
+  const handleLogin = async (e: React.FormEvent) => {
+  e.preventDefault();
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: correo,
+      password: password,
+    });
+
+    if (error) {
+      // Si el error es "Invalid login credentials", significa que no existe o la clave es errónea
+      if (error.message.includes("Invalid login credentials")) {
+        alert("Usuario no registrado. Crea tu cuenta en 'Regístrate aquí'");
+      } else {
+        alert(error.message);
+      }
+      return;
+    }
+
+    // Si el login es exitoso, actualiza el estado global
+    await checkAuth(); 
+  } catch (err) {
+    console.error("Error inesperado:", err);
+  }
+};
+  
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
