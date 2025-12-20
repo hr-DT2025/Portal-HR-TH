@@ -1,7 +1,7 @@
+import { supabase } from './services/supabaseClient'; // Añade esta línea
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { dataService } from './services/dataService';
-import { supabase } from './services/supabaseClient'; // IMPORTANTE: Faltaba esta línea
 import { User } from './types';
 
 // Importación de Páginas y Componentes
