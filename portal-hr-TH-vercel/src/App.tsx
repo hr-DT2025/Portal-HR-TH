@@ -1,18 +1,19 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { dataService } from './services/dataService';
+import { supabase } from './services/supabaseClient'; // IMPORTANTE: Faltaba esta línea
 import { User } from './types';
 
-// Importa tus componentes
+// Importación de Páginas y Componentes
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Requests from './pages/Requests';
 import Profile from './pages/Profile';
-import CompleteProfileForm from './components/CompleteProfileForm'; // Asegúrate de tener este import
-import Sidebar from './components/Sidebar'; // Si usas el Layout interno
-import { Menu, X } from 'lucide-react'; // Si usas íconos en Layout
+import CompleteProfileForm from './pages/CompleteProfileForm'; // Asegúrate de que esté en 'pages'
+import Sidebar from './components/Sidebar';
+import { Menu, X } from 'lucide-react';
 
-// --- Context definition ---
+// --- Definición del Contexto de Autenticación ---
 interface AuthContextType {
   user: User | null;
   needsProfile: boolean;
@@ -21,35 +22,54 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType>(null!);
+export const useAuth = () => useContext(AuthContext);
 
-// ¡IMPORTANTE! Exportar el hook para usarlo en CompleteProfileForm
-export const useAuth = () => useContext(AuthContext); [cite_start]// [cite: 5]
-
-// --- Layout Component (Opcional, basado en tu V1) ---
+// --- Componente de Diseño (Layout) ---
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // ... (Tu código de Layout existente con Sidebar)
-  // Por brevedad, asumo que usas el mismo Layout de V1
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden font-sans">
-       <Sidebar /> 
-       <main className="flex-1 overflow-y-auto p-4 md:p-8">
+    <div className="flex h-screen bg-gray-50 overflow-hidden">
+      {/* Mobile Sidebar Overlay */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 bg-slate-900/50 z-20 lg:hidden" onClick={() => setSidebarOpen(false)} />
+      )}
+
+      {/* Sidebar */}
+      <div className={`fixed inset-y-0 left-0 z-30 w-64 bg-slate-900 text-white transform transition-transform lg:relative lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <Sidebar />
+      </div>
+
+      {/* Contenido Principal */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <header className="bg-white shadow-sm p-4 flex items-center lg:hidden">
+          <button onClick={() => setSidebarOpen(true)}><Menu size={24} /></button>
+          <span className="ml-4 font-bold text-slate-800">Portal Colaborador</span>
+        </header>
+        <main className="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-50">
           {children}
-       </main>
+        </main>
+      </div>
     </div>
   );
 };
 
+// --- Componente Principal App ---
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
-  const [needsProfile, setNeedsProfile] = useState(false); [cite_start]// [cite: 44]
+  const [needsProfile, setNeedsProfile] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const checkAuth = async () => {
-    // setLoading(true); // Opcional: dependerá de si quieres mostrar spinner en cada refresh
-    const { user, needsProfile } = await dataService.getCurrentProfile();
-    setUser(user);
-    setNeedsProfile(needsProfile); [cite_start]// [cite: 45-46]
-    setLoading(false);
+    try {
+      const { user, needsProfile } = await dataService.getCurrentProfile();
+      setUser(user);
+      setNeedsProfile(needsProfile);
+    } catch (error) {
+      console.error("Error en checkAuth:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const logout = async () => {
@@ -62,39 +82,39 @@ export default function App() {
     checkAuth();
   }, []);
 
-  if (loading) return <div className="flex h-screen items-center justify-center">Cargando...</div>; [cite_start]// [cite: 47]
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-white">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   return (
     <AuthContext.Provider value={{ user, needsProfile, checkAuth, logout }}>
       <HashRouter>
         <Routes>
-          {/* 1. Login: Solo si no hay usuario ni perfil pendiente */}
-          <Route path="/login" element={
-            !user && !needsProfile ? <Login /> : <Navigate to="/" />
+          {/* Ruta Raíz: Decide a dónde enviar al usuario según su estado */}
+          <Route path="/" element={
+            user ? <Navigate to="/dashboard" /> : 
+            (needsProfile ? <Navigate to="/completar-registro" /> : <Navigate to="/login" />)
           } />
 
-          {/* 2. Completar Registro: Si tiene sesión pero falta perfil */}
+          {/* Login */}
+          <Route path="/login" element={!user && !needsProfile ? <Login /> : <Navigate to="/" />} />
+
+          {/* Onboarding: Si tiene cuenta Auth pero no datos en la tabla profiles */}
           <Route path="/completar-registro" element={
             needsProfile ? <CompleteProfileForm /> : <Navigate to="/" />
-          [cite_start]} /> // [cite: 48]
-
-          {/* 3. Rutas Protegidas: Solo si user existe completo */}
-          <Route path="/" element={
-            user ? <Layout><Dashboard /></Layout> : <Navigate to={needsProfile ? "/completar-registro" : "/login"} />
           } />
+
+          {/* Rutas Privadas */}
+          <Route path="/dashboard" element={user ? <Layout><Dashboard /></Layout> : <Navigate to="/" />} />
+          <Route path="/requests" element={user ? <Layout><Requests /></Layout> : <Navigate to="/" />} />
+          <Route path="/profile" element={user ? <Layout><Profile /></Layout> : <Navigate to="/" />} />
           
-          <Route path="/dashboard" element={
-            user ? <Layout><Dashboard /></Layout> : <Navigate to="/" />
-          } />
-
-          <Route path="/requests" element={
-             user ? <Layout><Requests /></Layout> : <Navigate to="/" />
-          } />
-
-          <Route path="/profile" element={
-             user ? <Layout><Profile /></Layout> : <Navigate to="/" />
-          } />
-
+          {/* Redirección por defecto */}
+          <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </HashRouter>
     </AuthContext.Provider>
